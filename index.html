@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>poke-quiz</title>
+  <style>
+    :root {
+      --bg: #0b1020; --fg: #e8eef8; --muted: #9fb0c8; --accent: #52a5ff;
+      --ok:#28c76f; --ng:#ff4d4f; --card:#151b2f; --border:#24314f;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN",Meiryo,"Noto Sans JP",sans-serif;color:var(--fg);background: radial-gradient(1200px 800px at 20% -10%, #112049 0%, #0b1020 60%)}
+    a{color:var(--accent)}
+    .wrap{max-width:960px;margin:0 auto;padding:24px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{margin:0 0 8px;font-size:28px;letter-spacing:.02em}
+    p{color:var(--muted)}
+    .screen{display:none;gap:16px}
+    .screen.active{display:grid}
+    .hero{display:grid;gap:8px}
+    .hero img{width:min(570px,90vw);height:auto;aspect-ratio:1/1;object-fit:contain;border-radius:12px;background:#0e1530;border:1px solid var(--border)}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1 1 auto}
+    input[type=text]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:18px;outline:none}
+    input::placeholder{color:#7282a2}
+    button{appearance:none;border:1px solid transparent;background:var(--accent);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 4px 14px rgba(82,165,255,.35)}
+    button.ghost{background:transparent;color:var(--fg);border-color:var(--border);box-shadow:none}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .note{font-size:14px;color:var(--muted)}
+    ul.note{margin:8px 0 0 20px}
+    .meta{color:var(--muted);font-size:14px}
+    .badge{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#101735}
+    table{width:100%;border-collapse:collapse;border-spacing:0}
+    thead th{text-align:left;color:var(--muted);font-weight:600;padding:10px;border-bottom:1px solid var(--border)}
+    tbody td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    td.center{text-align:center;width:64px}
+    .ok{color:var(--ok);font-weight:900}
+    .ng{color:var(--ng);font-weight:900}
+    .thumb{width:96px;height:96px;object-fit:contain;background:#0e1530;border-radius:8px;border:1px solid var(--border)}
+    .footer-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px}
+    #error{display:none;color:#ffb4b4}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>poke-quiz</h1>
+
+      <!-- Start Screen -->
+      <div id="start-screen" class="screen active">
+        <p class="meta">ポケモンずかんからランダムに 30 問出題。<span class="badge" id="poolInfo">読み込み中…</span></p>
+        <div id="error" class="note"></div>
+        <div class="hero">
+          <button id="playBtn" style="width:max(200px, 30%)" disabled>▶ プレイ開始</button>
+          <div class="note">
+            <strong>注意事項</strong>
+            <ul class="note">
+              <li>リージョンフォームは「リージョン名＋ポケモン名」で解答してください。</li>
+              <li>例）アローラコラッタ</li>
+              <li></li>
+              <li>キョダイマックスのすがたは「ポケモン名＋キョダイマックス」で解答してください。</li>
+              <li>例）フシギバナキョダイマックス</li>
+              <li></li>
+              <li>雌雄で姿が異なるポケモンは「ポケモン名＋オスorメス」で解答してください。</li>
+              <li>例）ケンホロウオス</li>
+              <li>なおwebの「ポケモンずかん」準拠です。</li>
+              <li>カバルドンなどゲーム中では雌雄の差がある場合でも、</li>
+              <li>ポケモンずかん上で差がなければオスメスの記載は不要です。</li>
+              <li></li>
+              <li>複数形態を持つポケモンは「ポケモン名＋形態名」で解答してください。</li>
+              <li>ただし何か違う場合もあるのでいい感じにやってください。</li>
+              <li></li>
+              <li>ヤバチャ、ポットデス、チャデスおよびヤバソチャの真贋は除外してあります。</li>
+              <li>これらはポケモン名のみ解答してください。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Screen -->
+      <div id="game-screen" class="screen">
+        <div class="row" style="justify-content: space-between">
+          <div class="meta">問題 <span id="qNow">1</span> / <span id="qMax">30</span></div>
+          <div class="meta">連続正解: <span id="streak">0</span></div>
+        </div>
+        <div class="hero" style="margin-top:4px;">
+          <img id="questionImage" alt="問題画像" src="" />
+          <form id="answerForm" class="row" autocomplete="off">
+            <input id="answerInput" class="grow" type="text" placeholder="ここに名前を入力" />
+            <button id="submitBtn" type="submit">解答する</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Result Screen -->
+      <div id="result-screen" class="screen">
+        <div class="row" style="justify-content: space-between">
+          <h2 style="margin:0">結果</h2>
+          <div class="meta">正解数: <strong id="score">0</strong> / <span id="scoreMax">30</span></div>
+        </div>
+        <div style="overflow:auto; margin-top:8px;">
+          <table>
+            <thead>
+              <tr>
+                <th class="center">判定</th>
+                <th>画像</th>
+                <th>正答</th>
+                <th>解答</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+        <div class="footer-actions">
+          <button id="retryBtn">↻ もう一度プレイ</button>
+          <span class="meta">ヒント: <span class="badge">Enter で送信</span> / <span class="badge">結果はこの場のみ保持</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATE = {
+      allImages: [],
+      questions: [],
+      idx: 0,
+      streak: 0,
+      records: [],
+      goal: 30,
+    };
+
+    const els = {
+      start: document.getElementById('start-screen'),
+      game: document.getElementById('game-screen'),
+      result: document.getElementById('result-screen'),
+      poolInfo: document.getElementById('poolInfo'),
+      error: document.getElementById('error'),
+      playBtn: document.getElementById('playBtn'),
+      retryBtn: document.getElementById('retryBtn'),
+      qNow: document.getElementById('qNow'), qMax: document.getElementById('qMax'),
+      streak: document.getElementById('streak'),
+      img: document.getElementById('questionImage'),
+      form: document.getElementById('answerForm'), input: document.getElementById('answerInput'),
+      score: document.getElementById('score'), scoreMax: document.getElementById('scoreMax'),
+      tbody: document.getElementById('resultBody'),
+    };
+
+    function showScreen(which){
+      els.start.classList.remove('active');
+      els.game.classList.remove('active');
+      els.result.classList.remove('active');
+      if(which==='start') els.start.classList.add('active');
+      if(which==='game') els.game.classList.add('active');
+      if(which==='result') els.result.classList.add('active');
+    }
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+      }
+      return arr;
+    }
+
+    function extractAnswerFromFilename(filename){
+      const base = filename.split('/').pop();
+      const us = base.indexOf('_');
+      const dot = base.lastIndexOf('.');
+      if(us===-1||dot===-1||dot<=us+1) return '';
+      return base.substring(us+1,dot);
+    }
+
+    function normalizeName(s){
+      if(!s) return '';
+      let t = s.normalize('NFKC');
+      // 空白（半角/全角）を除去
+      t = t.replace(/[\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g,'');
+      // コロン類似 → ":"
+      t = t.replace(/[\u003A\uFF1A]/g,':');
+      // 中黒類似 → 「・」
+      t = t.replace(/[\u30FB\uFF65\u00B7\u2022]/g,'・');
+      // 英字を大文字化
+      t = t.toUpperCase();
+      return t;
+    }
+
+    function prepareQuestions(){
+      const pool = shuffle(STATE.allImages.slice());
+      const goal = Math.min(STATE.goal, pool.length);
+      STATE.questions = pool.slice(0, goal);
+      els.qMax.textContent = String(goal);
+      els.scoreMax.textContent = String(goal);
+      els.poolInfo.textContent = `読み込み完了：${STATE.allImages.length} 枚`;
+    }
+
+    function renderQuestion(){
+      const fn = STATE.questions[STATE.idx];
+      els.img.src = `images/${encodeURIComponent(fn)}`;
+      els.img.alt = `問題画像 ${STATE.idx+1}`;
+      els.qNow.textContent = String(STATE.idx+1);
+      els.streak.textContent = String(STATE.streak);
+      els.input.value='';
+      setTimeout(()=>els.input.focus(),0);
+    }
+
+    function startGame(){
+      STATE.idx=0; STATE.streak=0; STATE.records=[];
+      prepareQuestions();
+      showScreen('game');
+      renderQuestion();
+    }
+
+    function finishGame(){
+      const correctCount = STATE.records.filter(r=>r.isCorrect).length;
+      els.score.textContent = String(correctCount);
+      els.tbody.innerHTML='';
+      const frag = document.createDocumentFragment();
+      STATE.records.forEach(r=>{
+        const tr=document.createElement('tr');
+        const tdJudge=document.createElement('td');
+        tdJudge.className='center';
+        tdJudge.innerHTML = r.isCorrect ? '<span class="ok">○</span>' : '<span class="ng">×</span>';
+        const tdImg=document.createElement('td');
+        const im=document.createElement('img');
+        im.className='thumb'; im.loading='lazy';
+        im.src=`images/${encodeURIComponent(r.filename)}`; im.alt=r.correctAnswer;
+        tdImg.appendChild(im);
+        const tdAns=document.createElement('td'); tdAns.textContent=r.correctAnswer;
+        const tdYou=document.createElement('td'); tdYou.textContent=r.userRaw??'';
+        tr.append(tdJudge,tdImg,tdAns,tdYou); frag.appendChild(tr);
+      });
+      els.tbody.appendChild(frag);
+      showScreen('result');
+    }
+
+    function submitAnswer(userRaw){
+      const filename = STATE.questions[STATE.idx];
+      const correct = extractAnswerFromFilename(filename);
+      const ok = normalizeName(userRaw) === normalizeName(correct);
+      STATE.records.push({ filename, correctAnswer: correct, userRaw, isCorrect: ok });
+      if(ok){
+        STATE.streak++;
+        if(STATE.streak >= STATE.questions.length){ finishGame(); return; }
+        STATE.idx++; renderQuestion();
+      }else{ finishGame(); }
+    }
+
+    // Events
+    els.playBtn.addEventListener('click', startGame);
+    els.retryBtn.addEventListener('click', ()=>showScreen('start'));
+    els.form.addEventListener('submit',(ev)=>{ ev.preventDefault(); const v=els.input.value.trim(); if(!v) return; submitAnswer(v); });
+
+    // Init: manifest を必須に
+    (async function init(){
+      try{
+        const res = await fetch('images/manifest.json',{cache:'no-store'});
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const list = await res.json();
+        if(!Array.isArray(list) || list.length===0) throw new Error('manifest が空です');
+        // 許容拡張子のみに限定 & 順序維持の重複排除
+        const extRe = /\.(png|jpg|jpeg|gif|webp)$/i;
+        const seen=new Set();
+        STATE.allImages = list.filter(x=>extRe.test(x) && !seen.has(x) && seen.add(x));
+        els.poolInfo.textContent = `読み込み完了：${STATE.allImages.length} 枚`;
+        els.playBtn.disabled = STATE.allImages.length === 0;
+      }catch(err){
+        els.error.style.display='block';
+        els.error.textContent = `manifest の読み込みに失敗しました：${err.message}（images/manifest.json を配置してください）`;
+        els.poolInfo.textContent = '読み込み失敗';
+        els.playBtn.disabled = true;
+      }
+    })();
+  </script>
+</body>
+</html>
