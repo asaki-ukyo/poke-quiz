@@ -19,17 +19,18 @@
     p{color:var(--muted)}
     .screen{display:none;gap:16px}
     .screen.active{display:grid}
-    .hero{display:grid;gap:8px}
-    .hero img{width:min(570px,90vw);height:auto;aspect-ratio:1/1;object-fit:contain;border-radius:12px;background:#0e1530;border:1px solid var(--border)}
+    .hero{display:grid;gap:8px;justify-items:center}
+    .hero img{width:min(570px, 100%);max-width:100%;height:auto;aspect-ratio:1/1;object-fit:contain;border-radius:12px;background:#0e1530;border:1px solid var(--border)}
     .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .grow{flex:1 1 auto}
+    .grow{flex:1 1 auto;min-width:0}
     input[type=text]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:18px;outline:none}
     input::placeholder{color:#7282a2}
     button{appearance:none;border:1px solid transparent;background:var(--accent);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 4px 14px rgba(82,165,255,.35)}
     button.ghost{background:transparent;color:var(--fg);border-color:var(--border);box-shadow:none}
     button:disabled{opacity:.5;cursor:not-allowed}
     .note{font-size:14px;color:var(--muted)}
-    ul.note{margin:8px 0 0 20px}
+    ul.note{margin:8px 0 0 20px padding-left:1em}
+    .note .sub{display:block;opacity:.85;font-size:.95em;margin-top:2px;margin-left:1.3em;padding-left:0}
     .meta{color:var(--muted);font-size:14px}
     .badge{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#101735}
     table{width:100%;border-collapse:collapse;border-spacing:0}
@@ -55,27 +56,15 @@
         <div class="hero">
           <button id="playBtn" style="width:max(200px, 30%)" disabled>▶ プレイ開始</button>
           <div class="note">
-            <strong>注意事項</strong>
-            <ul class="note">
-              <li>リージョンフォームは「リージョン名＋ポケモン名」で解答してください。</li>
-              <li>例）アローラコラッタ</li>
-              <li></li>
-              <li>キョダイマックスのすがたは「ポケモン名＋キョダイマックス」で解答してください。</li>
-              <li>例）フシギバナキョダイマックス</li>
-              <li></li>
-              <li>雌雄で姿が異なるポケモンは「ポケモン名＋オスorメス」で解答してください。</li>
-              <li>例）ケンホロウオス</li>
-              <li>なおwebの「ポケモンずかん」準拠です。</li>
-              <li>カバルドンなどゲーム中では雌雄の差がある場合でも、</li>
-              <li>ポケモンずかん上で差がなければオスメスの記載は不要です。</li>
-              <li></li>
-              <li>複数形態を持つポケモンは「ポケモン名＋形態名」で解答してください。</li>
-              <li>ただし何か違う場合もあるのでいい感じにやってください。</li>
-              <li></li>
-              <li>ヤバチャ、ポットデス、チャデスおよびヤバソチャの真贋は除外してあります。</li>
-              <li>これらはポケモン名のみ解答してください。</li>
-            </ul>
-          </div>
+  <strong>注意事項</strong>
+  <ul class="note">
+    <li>リージョンフォームは「リージョン名＋ポケモン名」で解答してください。<div class="sub">例）アローラコラッタ</div></li>
+    <li>キョダイマックスのすがたは「ポケモン名＋キョダイマックス」で解答してください。<div class="sub">例）フシギバナキョダイマックス</div></li>
+    <li>雌雄で姿が異なるポケモンは「ポケモン名＋オスorメス」で解答してください。<div class="sub">例）ケンホロウオス</div><div class="sub">なおwebの「ポケモンずかん」準拠です。</div><div class="sub">カバルドンなどゲーム中では雌雄の差がある場合でも、</div><div class="sub">ポケモンずかん上で差がなければオスメスの記載は不要です。</div></li>
+    <li>複数形態を持つポケモンは「ポケモン名＋形態名」で解答してください。<div class="sub">ただし何か違う場合もあるのでいい感じにやってください。</div></li>
+    <li>ヤバチャ、ポットデス、チャデスおよびヤバソチャの真贋は除外してあります。<div class="sub">これらはポケモン名のみ解答してください。</div></li>
+  </ul>
+</div>
         </div>
       </div>
 
@@ -90,7 +79,18 @@
           <form id="answerForm" class="row" autocomplete="off">
             <input id="answerInput" class="grow" type="text" placeholder="ここに名前を入力" />
             <button id="submitBtn" type="submit">解答する</button>
+            <button id="giveUpBtn" type="button">諦める</button>
           </form>
+          <div class="note">
+  <strong>注意事項</strong>
+  <ul class="note">
+    <li>リージョンフォームは「リージョン名＋ポケモン名」で解答してください。<div class="sub">例）アローラコラッタ</div></li>
+    <li>キョダイマックスのすがたは「ポケモン名＋キョダイマックス」で解答してください。<div class="sub">例）フシギバナキョダイマックス</div></li>
+    <li>雌雄で姿が異なるポケモンは「ポケモン名＋オスorメス」で解答してください。<div class="sub">例）ケンホロウオス</div><div class="sub">なおwebの「ポケモンずかん」準拠です。</div><div class="sub">カバルドンなどゲーム中では雌雄の差がある場合でも、</div><div class="sub">ポケモンずかん上で差がなければオスメスの記載は不要です。</div></li>
+    <li>複数形態を持つポケモンは「ポケモン名＋形態名」で解答してください。<div class="sub">ただし何か違う場合もあるのでいい感じにやってください。</div></li>
+    <li>ヤバチャ、ポットデス、チャデスおよびヤバソチャの真贋は除外してあります。<div class="sub">これらはポケモン名のみ解答してください。</div></li>
+  </ul>
+</div>
         </div>
       </div>
 
@@ -139,6 +139,7 @@
       error: document.getElementById('error'),
       playBtn: document.getElementById('playBtn'),
       retryBtn: document.getElementById('retryBtn'),
+      giveUpBtn: document.getElementById('giveUpBtn'),
       qNow: document.getElementById('qNow'), qMax: document.getElementById('qMax'),
       streak: document.getElementById('streak'),
       img: document.getElementById('questionImage'),
@@ -250,6 +251,7 @@
     // Events
     els.playBtn.addEventListener('click', startGame);
     els.retryBtn.addEventListener('click', ()=>showScreen('start'));
+    els.giveUpBtn.addEventListener('click', finishGame);
     els.form.addEventListener('submit',(ev)=>{ ev.preventDefault(); const v=els.input.value.trim(); if(!v) return; submitAnswer(v); });
 
     // Init: manifest を必須に
