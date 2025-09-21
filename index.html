@@ -29,7 +29,7 @@
     button.ghost{background:transparent;color:var(--fg);border-color:var(--border);box-shadow:none}
     button:disabled{opacity:.5;cursor:not-allowed}
     .note{font-size:14px;color:var(--muted)}
-    ul.note{margin:8px 0 0 20px padding-left:1em}
+    ul.note{margin:8px 0 0 20px; padding-left:1em}
     .note .sub{display:block;opacity:.85;font-size:.95em;margin-top:2px;margin-left:1.3em;padding-left:0}
     .meta{color:var(--muted);font-size:14px}
     .badge{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#101735}
@@ -42,7 +42,10 @@
     .thumb{width:96px;height:96px;object-fit:contain;background:#0e1530;border-radius:8px;border:1px solid var(--border)}
     .footer-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px}
     #error{display:none;color:#ffb4b4}
-  </style>
+  
+.muted-link{color:var(--muted); text-decoration:underline; display:inline-block; margin-top:6px}
+.muted-link:hover{color:var(--fg)}
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -55,6 +58,7 @@
         <div id="error" class="note"></div>
         <div class="hero">
           <button id="playBtn" style="width:max(200px, 30%)" disabled>▶ プレイ開始</button>
+          <a id="openAnswers" href="#" class="muted-link" style="font-size:14px">📖 正答一覧（別ウィンドウ）</a>
           <div class="note">
   <strong>注意事項</strong>
   <ul class="note">
@@ -147,6 +151,8 @@
       score: document.getElementById('score'), scoreMax: document.getElementById('scoreMax'),
       tbody: document.getElementById('resultBody'),
     };
+      (function(){ const link=document.getElementById("openAnswers"); if(link) link.addEventListener("click", openAnswerList); })();
+
 
     function showScreen(which){
       els.start.classList.remove('active');
@@ -251,8 +257,14 @@
     // Events
     els.playBtn.addEventListener('click', startGame);
     els.retryBtn.addEventListener('click', ()=>showScreen('start'));
-    els.giveUpBtn.addEventListener('click', finishGame);
-    els.form.addEventListener('submit',(ev)=>{ ev.preventDefault(); const v=els.input.value.trim(); if(!v) return; submitAnswer(v); });
+    function giveUp(){
+  const filename = STATE.questions[STATE.idx];
+  const correct = extractAnswerFromFilename(filename);
+  STATE.records.push({ filename, correctAnswer: correct, userRaw: '（諦め）', isCorrect: false });
+  finishGame();
+}
+els.giveUpBtn.addEventListener('click', giveUp);
+els.form.addEventListener('submit',(ev)=>{ ev.preventDefault(); const v=els.input.value.trim(); if(!v) return; submitAnswer(v); });
 
     // Init: manifest を必須に
     (async function init(){
@@ -274,6 +286,98 @@
         els.playBtn.disabled = true;
       }
     })();
-  </script>
+  
+// === Answer list popup ===
+function openAnswerList(evt){
+  evt && evt.preventDefault();
+  const w = window.open('', 'answers', 'width=560,height=720,menubar=no,location=no,status=no,toolbar=no,resizable=yes,scrollbars=yes');
+  if(!w){ alert('ポップアップがブロックされました。ブラウザの設定を確認してください。'); return; }
+  const boot = `<!doctype html><html lang="ja"><head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>正答一覧</title>
+    <style>
+      :root{ --bg:#0b1020; --fg:#e8eef8; --muted:#9fb0c8; --card:#151b2f; --border:#24314f; }
+      *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+      header{position:sticky;top:0;background:linear-gradient(#121a32,#0b1020);padding:10px 14px;border-bottom:1px solid var(--border)}
+      h1{font-size:16px;margin:0}
+      main{padding:12px}
+      .note{color:var(--muted);font-size:12px;margin:4px 0 12px}
+      table{width:100%;border-collapse:collapse}
+      thead th{position:sticky;top:0;background:#121a32;color:var(--muted);font-weight:600;text-align:left;border-bottom:1px solid var(--border);padding:8px}
+      tbody td{padding:8px;border-bottom:1px solid var(--border)}
+      tbody tr:hover{background:#101735}
+      input[type=search]{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:#0e1530;color:var(--fg);outline:none}
+    </style>
+  </head><body>
+    <header><h1>正答一覧</h1></header>
+    <main>
+      <input id="filter" type="search" placeholder="番号または名前で絞り込み…" />
+      <div class="note">このウィンドウはトップ画面からのみ開けます。プレイ中は開けません。</div>
+      <div id="status" class="note">読み込み中…</div>
+      <div style="overflow:auto; max-height: calc(100vh - 170px)">
+        <table id="tbl"><thead><tr></tr></thead><tbody></tbody></table>
+      </div>
+    </main>
+  </body></html>`;
+  w.document.open(); w.document.write(boot); w.document.close();
+
+  const doc = w.document;
+  const $ = sel => doc.querySelector(sel);
+
+  function renderHeader(header){
+    const tr = doc.querySelector('#tbl thead tr');
+    tr.innerHTML = '';
+    for(const h of header){
+      const th = doc.createElement('th');
+      th.textContent = h;
+      tr.appendChild(th);
+    }
+  }
+  function renderRows(rows){
+    const tbody = $('#tbl tbody');
+    tbody.innerHTML = '';
+    const frag = doc.createDocumentFragment();
+    for(const r of rows){
+      const tr = doc.createElement('tr');
+      for(const cell of r){
+        const td = doc.createElement('td');
+        td.textContent = cell ?? '';
+        tr.appendChild(td);
+      }
+      frag.appendChild(tr);
+    }
+    tbody.appendChild(frag);
+  }
+  function parseCSV(text){
+    return text.split(/\r?\n/).filter(line => line.trim() !== '').map(line => line.split(','));
+  }
+  function filterRows(allRows){
+    const q = $('#filter').value.trim().toLowerCase();
+    if(!q) return allRows;
+    return allRows.filter(r => r.some(c => String(c||'').toLowerCase().includes(q)));
+  }
+
+  (async () => {
+    try{
+      let res = await fetch('correct.csv');
+      if(!res.ok) res = await fetch('correct.txt');
+      if(!res.ok) throw new Error('correct.csv / correct.txt が見つかりません');
+      const txt = await res.text();
+      const rows = parseCSV(txt);
+      if(rows.length === 0) throw new Error('データが空です');
+      const header = rows[0];
+      const data = rows.slice(1);
+      renderHeader(header);
+      renderRows(data);
+      $('#status').textContent = `読み込み完了：${data.length} 件`;
+      $('#filter').addEventListener('input', () => renderRows(filterRows(data)));
+    }catch(err){
+      $('#status').textContent = `読み込みに失敗しました：${err.message}`;
+    }
+  })();
+}
+
+</script>
 </body>
 </html>
